@@ -9,7 +9,7 @@ extern crate alloc;
 use alloc::{format, string::String};
 use arduino_hal::prelude::*;
 
-use avr_counter::{prelude::*, Counter0, Counter1};
+use avr_counter::{prelude::*, Counter0, Counter1, Counter2};
 
 use avr_allocator::AvrHeap;
 #[global_allocator]
@@ -34,7 +34,7 @@ fn main() -> ! {
     let mut x_step = pins.d2.into_output().downgrade();
 
     const CPUFREQ: u32 = 16_000_000; //16MHz
-    let mut counter = Counter1::<{ CPUFREQ }>::new();
+    let mut counter = Counter2::<{ CPUFREQ }>::new();
 
     let pluse_length = fugit::MicrosDurationU32::micros(20);
     let delay = pluse_length * 5;

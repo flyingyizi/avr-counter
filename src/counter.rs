@@ -11,11 +11,11 @@ pub fn to_prescale_ticks(
     max_ticks: u16,
 ) -> Result<(u16 /*prescale*/, u16 /*newticks*/), ()> {
     //only support Mhz
-    assert!(cpu_freq > 1_000_000);
+    debug_assert!(cpu_freq >= 1_000_000);
 
     let cpu_freq = cpu_freq / 1_000_000;
 
-    let micros = timeout.to_micros();
+    let micros = timeout.ticks();
 
     let ticks_1 = micros * cpu_freq;
 
@@ -112,10 +112,6 @@ macro_rules! impl_tc_traditional {
             }
             fn wait(&mut self) -> nb::Result<(), void::Void> {
                 self._wait()
-                // match self._wait() {
-                //     Err(nb::Error::WouldBlock) => Err(nb::Error::WouldBlock),
-                //     _ => Ok(()),
-                // }
             }
         }
     };
@@ -230,6 +226,9 @@ macro_rules! impl_atmega_tc2 {
                     peripheral.tccr2b.write(|w| w.cs2().no_clock() );
                     //todo TC2 support 32, 128 prescale.
 
+                    //reset
+                    peripheral.tcnt2.write(|w|  w.bits(0) );
+                    peripheral.ocr2a.write(|w|  w.bits( (ticks -1) as u8) );
                     // set CTC mode
                     // WGM2 WGM1 WGM0
                     // 0    1    0 CTC
@@ -246,9 +245,6 @@ macro_rules! impl_atmega_tc2 {
                         }
 
                     });
-                    //reset
-                    peripheral.tcnt2.write(|w|  w.bits(0) );
-                    peripheral.ocr2a.write(|w|  w.bits( (ticks -1) as u8) );
 
             },
             is_block: |peripheral| -> bool{
@@ -265,16 +261,35 @@ macro_rules! impl_atmega_tc2 {
     };
 }
 
-#[cfg(all(feature = "atmega-device-selected", not(feature = "atmega8")))]
+#[cfg(any(
+    feature = "atmega32u4",
+    feature = "atmega48p",
+    feature = "atmega168",
+    feature = "atmega328p",
+    feature = "atmega328pb",
+    feature = "atmega2560",
+    feature = "atmega1280",
+    feature = "atmega1284p"
+))]
 impl_atmega_tc0! {
     name: Counter0,
 }
 
-#[cfg(all(feature = "atmega-device-selected", not(feature = "atmega8")))]
+#[cfg(any(
+    feature = "atmega32u4",
+    feature = "atmega48p",
+    feature = "atmega168",
+    feature = "atmega328p",
+    feature = "atmega328pb",
+    feature = "atmega2560",
+    feature = "atmega1280",
+    feature = "atmega1284p"
+))]
 impl_atmega_tc1! {
     name: Counter1,
 }
 
+// not include atmega32u4
 #[cfg(any(
     feature = "atmega48p",
     feature = "atmega168",
