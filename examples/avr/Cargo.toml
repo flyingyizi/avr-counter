@@ -21,6 +21,8 @@ avr-counter ={ path= "../../../avr-counter", features = ["atmega328p"]}
 # Configure the build for minimal size - AVRs have very little program memory
 [profile.dev]
 panic = "abort"
+codegen-units = 1
+#debug = true
 lto = true
 opt-level = "s"
 

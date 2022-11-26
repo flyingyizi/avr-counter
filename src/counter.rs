@@ -1,8 +1,8 @@
 //! macro to define
 
 /// TC origin clock input is cpu-freq. prescale should be 1, 8, 64, 256, 1024. final TC freq
-/// is  "CPU_FREQ / prescale". 
-/// 
+/// is  "CPU_FREQ / prescale".
+///
 /// judge whether TC can store input timeout . if yes return prescale and related ticks.
 /// the ticks is the based on final prescaled TC freq. if can not store the timeout, return err
 pub fn to_prescale_ticks(
@@ -11,14 +11,14 @@ pub fn to_prescale_ticks(
     max_ticks: u16,
 ) -> Result<(u16 /*prescale*/, u16 /*newticks*/), ()> {
     //only support Mhz
-    assert!( cpu_freq > 1_000_000);
+    assert!(cpu_freq > 1_000_000);
     let cpu_freq = cpu_freq as f32;
 
     let micros = timeout.to_micros();
 
-    let ticks_1 = micros as f32 * cpu_freq  / 1_000_000_f32;
+    let ticks_1 = micros as f32 * cpu_freq / 1_000_000_f32;
 
-    let max_micros = 1_000_000_f32 / cpu_freq  * (max_ticks as f32);
+    let max_micros = 1_000_000_f32 / cpu_freq * (max_ticks as f32);
     let max_micros = max_micros as u32;
 
     if micros <= max_micros {
@@ -130,7 +130,7 @@ macro_rules! impl_atmega_tc0 {
             name: $Name,
             peripheral: $crate::pac::TC0,
             start_ctc_mode: |peripheral, prescale,ticks| {
-                    //pause 
+                    //pause
                     peripheral.tccr0b.write(|w| w.cs0().variant( $crate::pac::tc0::tccr0b::CS0_A::NO_CLOCK));
 
                     let prescale = match prescale {
@@ -150,8 +150,8 @@ macro_rules! impl_atmega_tc0 {
                         w.cs0().variant(prescale)
                     });
                     //reset
-                    peripheral.tcnt0.write(|w| unsafe { w.bits(0) });
-                    peripheral.ocr0a.write(|w| unsafe { w.bits(ticks as u8) });
+                    peripheral.tcnt0.write(|w|  w.bits(0) );
+                    peripheral.ocr0a.write(|w|  w.bits(ticks as u8) );
 
             },
             is_block: |peripheral| -> bool{
@@ -178,7 +178,7 @@ macro_rules! impl_atmega_tc1 {
             name: $Name,
             peripheral: $crate::pac::TC1,
             start_ctc_mode: |peripheral, prescale,ticks| {
-                    //pause 
+                    //pause
                     peripheral.tccr1b.write(|w| w.cs1().variant( $crate::pac::tc1::tccr1b::CS1_A::NO_CLOCK));
                     let prescale = match prescale {
                         1 =>   $crate::pac::tc1::tccr1b::CS1_A::DIRECT,
@@ -197,14 +197,14 @@ macro_rules! impl_atmega_tc1 {
                         w.cs1().variant(prescale)
                     });
                     //reset
-                    peripheral.tcnt1.write(|w| unsafe { w.bits(0) });
-                    peripheral.ocr1a.write(|w| unsafe { w.bits(ticks as u16) });
+                    peripheral.tcnt1.write(|w|  w.bits(0) );
+                    peripheral.ocr1a.write(|w|  w.bits(ticks as u16) );
 
             },
             is_block: |peripheral| -> bool{
                 if true == peripheral.tifr1.read().ocf1a().bit_is_set() {
                     // clear the flag bit manually since there is no ISR to execute
-                    // clear it by writing '1' to it (as per the datasheet)                    
+                    // clear it by writing '1' to it (as per the datasheet)
                     peripheral.tifr1.modify(|_, w| w.ocf1a().set_bit());
                     return false;
                 }
@@ -228,7 +228,7 @@ macro_rules! impl_atmega_tc2 {
             name: $Name,
             peripheral: $crate::pac::TC2,
             start_ctc_mode: |peripheral, prescale,ticks| {
-                    //pause 
+                    //pause
                     peripheral.tccr2b.write(|w| w.cs2().variant( $crate::pac::tc2::tccr2b::CS2_A::NO_CLOCK));
                     //todo TC2 support 32, 128 prescale.
                     let prescale = match prescale {
@@ -248,8 +248,8 @@ macro_rules! impl_atmega_tc2 {
                         w.cs2().variant(prescale)
                     });
                     //reset
-                    peripheral.tcnt2.write(|w| unsafe { w.bits(0) });
-                    peripheral.ocr2a.write(|w| unsafe { w.bits(ticks as u8) });
+                    peripheral.tcnt2.write(|w|  w.bits(0) );
+                    peripheral.ocr2a.write(|w|  w.bits(ticks as u8) );
 
             },
             is_block: |peripheral| -> bool{
@@ -303,7 +303,7 @@ mod tests {
         let timeout = fugit::MicrosDurationU32::micros(5);
         let r = to_prescale_ticks(16_000_000, timeout, core::u8::MAX as u16);
         // println!("{:?}", r);
-        assert_eq!(r, Ok((1,80)));
+        assert_eq!(r, Ok((1, 80)));
         let timeout = fugit::MicrosDurationU32::micros(15000);
         let r = to_prescale_ticks(16_000_000, timeout, core::u8::MAX as u16);
         // println!("{:?}", r);
