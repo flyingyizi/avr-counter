@@ -34,6 +34,8 @@ attiny88 = ["avr-device/attiny88", "device-selected"]
 attiny167 = ["avr-device/attiny167", "device-selected"]
 attiny2313 = ["avr-device/attiny2313", "device-selected"]
 
+default = ["atmega328p"]
+
 [dev-dependencies]
 ufmt = "0.1.0"
 avr-device = { version = "0.3", features = ["atmega328p"]}

@@ -12,29 +12,29 @@ pub fn to_prescale_ticks(
 ) -> Result<(u16 /*prescale*/, u16 /*newticks*/), ()> {
     //only support Mhz
     assert!(cpu_freq > 1_000_000);
-    let cpu_freq = cpu_freq as f32;
+
+    let cpu_freq = cpu_freq / 1_000_000;
 
     let micros = timeout.to_micros();
 
-    let ticks_1 = micros as f32 * cpu_freq / 1_000_000_f32;
+    let ticks_1 = micros * cpu_freq ;
 
-    let max_micros = 1_000_000_f32 / cpu_freq * (max_ticks as f32);
-    let max_micros = max_micros as u32;
+    let max_micros = max_ticks as u32  / cpu_freq ;
 
     if micros <= max_micros {
         let newticks = ticks_1 as u16;
         return Ok((1, newticks));
     } else if micros <= max_micros * 8 {
-        let newticks = (ticks_1 / 8_f32) as u16;
+        let newticks = (ticks_1 / 8) as u16;
         return Ok((8, newticks));
     } else if micros <= max_micros * 64 {
-        let newticks = (ticks_1 / 64_f32) as u16;
+        let newticks = (ticks_1 / 64) as u16;
         return Ok((64, newticks));
     } else if micros <= max_micros * 256 {
-        let newticks = (ticks_1 / 256_f32) as u16;
+        let newticks = (ticks_1 / 256) as u16;
         return Ok((256, newticks));
     } else if micros <= max_micros * 1024 {
-        let newticks = (ticks_1 / 1024_f32) as u16;
+        let newticks = (ticks_1 / 1024) as u16;
         return Ok((1024, newticks));
     }
 
@@ -131,27 +131,27 @@ macro_rules! impl_atmega_tc0 {
             peripheral: $crate::pac::TC0,
             start_ctc_mode: |peripheral, prescale,ticks| {
                     //pause
-                    peripheral.tccr0b.write(|w| w.cs0().variant( $crate::pac::tc0::tccr0b::CS0_A::NO_CLOCK));
+                    peripheral.tccr0b.write(|w| w.cs0().no_clock() );
 
-                    let prescale = match prescale {
-                        1 =>   $crate::pac::tc0::tccr0b:: CS0_A::DIRECT,
-                        8 =>   $crate::pac::tc0::tccr0b:: CS0_A::PRESCALE_8,
-                        64 =>  $crate::pac::tc0::tccr0b:: CS0_A::PRESCALE_64,
-                        256 => $crate::pac::tc0::tccr0b:: CS0_A::PRESCALE_256,
-                        1024 =>$crate::pac::tc0::tccr0b:: CS0_A::PRESCALE_1024,
-                        _ => unreachable!(),
-                    };
-                    // set CTC mode
-                    // WGM02 WGM01 WGM00
-                    //  0    1     0      CTC
-                    peripheral.tccr0a.write(|w| w.wgm0().bits(0b10));
-                    peripheral.tccr0b.write(|w| {
-                        // w.wgm02().clear_bit();
-                        w.cs0().variant(prescale)
-                    });
                     //reset
                     peripheral.tcnt0.write(|w|  w.bits(0) );
                     peripheral.ocr0a.write(|w|  w.bits(ticks as u8) );
+                    // set CTC mode
+                    // WGM02 WGM01 WGM00
+                    //  0    1     0      CTC
+                    peripheral.tccr0a.write(|w| w.wgm0().ctc());
+                    peripheral.tccr0b.write(|w| {
+                        //w.wgm02().clear_bit();
+                        match prescale {
+                            1 => w.cs0().direct(),
+                            8 => w.cs0().prescale_8(),
+                            64 => w.cs0().prescale_64(),
+                            256 => w.cs0().prescale_256(),
+                            1024 => w.cs0().prescale_1024(),
+                            _ => {unreachable!()},
+                        }
+
+                    });
 
             },
             is_block: |peripheral| -> bool{
@@ -165,7 +165,6 @@ macro_rules! impl_atmega_tc0 {
                 $crate::to_prescale_ticks(cpu_freq,timeout, core::u8::MAX as u16)
             },
         }
-
     };
 }
 
@@ -179,26 +178,26 @@ macro_rules! impl_atmega_tc1 {
             peripheral: $crate::pac::TC1,
             start_ctc_mode: |peripheral, prescale,ticks| {
                     //pause
-                    peripheral.tccr1b.write(|w| w.cs1().variant( $crate::pac::tc1::tccr1b::CS1_A::NO_CLOCK));
-                    let prescale = match prescale {
-                        1 =>   $crate::pac::tc1::tccr1b::CS1_A::DIRECT,
-                        8 =>   $crate::pac::tc1::tccr1b::CS1_A::PRESCALE_8,
-                        64 =>  $crate::pac::tc1::tccr1b::CS1_A::PRESCALE_64,
-                        256 => $crate::pac::tc1::tccr1b::CS1_A::PRESCALE_256,
-                        1024 =>$crate::pac::tc1::tccr1b::CS1_A::PRESCALE_1024,
-                        _ => unreachable!(),
-                    };
+                    peripheral.tccr1b.write(|w| w.cs1().no_clock() );
+                    //reset
+                    peripheral.tcnt1.write(|w|  w.bits(0) );
+                    peripheral.ocr1a.write(|w|  w.bits(ticks as u16) );
                     // set CTC mode
                     // WGM13 WGM12 WGM11 WGM10
                     // 0     1     0     0     CTC
                     peripheral.tccr1a.write(|w| w.wgm1().bits(0b00));
                     peripheral.tccr1b.write(|w| {
                         w.wgm1().bits(0b01);
-                        w.cs1().variant(prescale)
+                        match prescale {
+                            1 => w.cs1().direct(),
+                            8 => w.cs1().prescale_8(),
+                            64 => w.cs1().prescale_64(),
+                            256 => w.cs1().prescale_256(),
+                            1024 => w.cs1().prescale_1024(),
+                            _ => {unreachable!()},
+                        }
+
                     });
-                    //reset
-                    peripheral.tcnt1.write(|w|  w.bits(0) );
-                    peripheral.ocr1a.write(|w|  w.bits(ticks as u16) );
 
             },
             is_block: |peripheral| -> bool{
@@ -215,7 +214,6 @@ macro_rules! impl_atmega_tc1 {
             },
 
         }
-
     };
 }
 
@@ -229,23 +227,24 @@ macro_rules! impl_atmega_tc2 {
             peripheral: $crate::pac::TC2,
             start_ctc_mode: |peripheral, prescale,ticks| {
                     //pause
-                    peripheral.tccr2b.write(|w| w.cs2().variant( $crate::pac::tc2::tccr2b::CS2_A::NO_CLOCK));
+                    peripheral.tccr2b.write(|w| w.cs2().no_clock() );
                     //todo TC2 support 32, 128 prescale.
-                    let prescale = match prescale {
-                        1 =>   $crate::pac::tc2::tccr2b::CS2_A::DIRECT,
-                        8 =>   $crate::pac::tc2::tccr2b::CS2_A::PRESCALE_8,
-                        64 =>  $crate::pac::tc2::tccr2b::CS2_A::PRESCALE_64,
-                        256 => $crate::pac::tc2::tccr2b::CS2_A::PRESCALE_256,
-                        1024 =>$crate::pac::tc2::tccr2b::CS2_A::PRESCALE_1024,
-                        _ => unreachable!(),
-                    };
+
                     // set CTC mode
                     // WGM2 WGM1 WGM0
                     // 0    1    0 CTC
-                    peripheral.tccr2a.write(|w| w.wgm2().bits(0b10));
+                    peripheral.tccr2a.write(|w| w.wgm2().ctc());// .bits(0b10));
                     peripheral.tccr2b.write(|w| {
-                        w.wgm22().clear_bit();
-                        w.cs2().variant(prescale)
+                        // w.wgm22().clear_bit();
+                        match prescale {
+                            1 => w.cs2().direct(),
+                            8 => w.cs2().prescale_8(),
+                            64 => w.cs2().prescale_64(),
+                            256 => w.cs2().prescale_256(),
+                            1024 => w.cs2().prescale_1024(),
+                            _ => {unreachable!()},
+                        }
+
                     });
                     //reset
                     peripheral.tcnt2.write(|w|  w.bits(0) );
