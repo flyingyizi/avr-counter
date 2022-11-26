@@ -1,0 +1,50 @@
+[env]
+ELFTARGET = "target/avr-atmega328p/release/counter-demo.elf"
+
+[tasks.format]
+install_crate = "rustfmt"
+command = "cargo"
+args = ["fmt", "--", "--emit=files"]
+
+[tasks.clean]
+command = "cargo"
+args = ["clean"]
+
+[tasks.releasebuild]
+command = "cargo"
+args = ["build", "--release"]
+dependencies = ["clean"]
+
+[tasks.usage]
+command = "avr-objdump"
+args = ["-h","-P", "mem-usage", "${ELFTARGET}"]
+dependencies = ["releasebuild"]
+
+[tasks.hex]
+command = "avr-objcopy"
+args = ["-R", ".eeprom","-j", ".text", "-j", ".data", "-O", "ihex", "${ELFTARGET}", "counter-demo.hex"]
+dependencies = ["releasebuild"]
+
+#[tasks.eep]
+#command = "avr-objcopy"
+#args = ["-j", ".eeprom", "--set-section-flags=.eeprom=alloc,load", "--change-section-lma", ".eeprom=0", "--no-change-warnings", "-O", "ihex", "${ELFTARGET}", "ssd1306_eeprom.eep"]
+#dependencies = ["hex"]
+#[tasks.eepbin]
+#command = "avr-objcopy"
+#args = ["-j", ".eeprom", "--set-section-flags=.eeprom=alloc,load", "--change-section-lma", ".eeprom=0", "--no-change-warnings", "-O", "binary", "${ELFTARGET}", "ssd1306_eeprom.eep.bin"]
+#dependencies = ["hex"]
+
+
+[tasks.test]
+command = "cargo"
+args = ["test"]
+dependencies = ["clean"]
+
+[tasks.my-flow]
+dependencies = [
+    "format",
+    "releasebuild",
+    "hex",
+    "eep",
+    "test"
+]

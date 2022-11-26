@@ -1,0 +1,7 @@
+/target
+*.lock
+*.workspace
+*.hex.asm
+*.elf
+Project Backups
+
