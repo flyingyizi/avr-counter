@@ -19,6 +19,7 @@ pub use void;
 pub mod prelude {
     pub use embedded_hal::timer::CountDown as _;
 }
+pub use counter::to_prescale_ticks;
 
 // #[cfg(test)]
 // pub mod testutil;

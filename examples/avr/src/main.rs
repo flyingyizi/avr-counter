@@ -34,10 +34,10 @@ fn main() -> ! {
     let mut x_step = pins.d2.into_output().downgrade();
 
     const CPUFREQ: u32 = 16_000_000; //16MHz
-    let mut counter = Counter0::<{ CPUFREQ }>::new();
+    let mut counter = Counter1::<{ CPUFREQ }>::new();
 
-    let pluse_length = fugit::MicrosDurationU32::micros(10);
-    let delay = pluse_length * 10;
+    let pluse_length = fugit::MicrosDurationU32::micros(20);
+    let delay = pluse_length * 5;
 
     let o = format!("pluse {:?} delay {:?}", pluse_length, delay);
     ufmt::uwriteln!(&mut serial, "{}:\r", o.as_str()).void_unwrap();
@@ -47,14 +47,14 @@ fn main() -> ! {
     //     let _ = x_step .set_high();
     //     let _ = nb::block!(counter.wait());
     // ufmt::uwriteln!(&mut serial, "2:\r").void_unwrap();
-    
+
     loop {
+        let _ = counter.start(pluse_length);
         let _ = x_step.set_high();
-        let _ = counter.start(delay);
         let _ = nb::block!(counter.wait());
 
+        let _ = counter.start(delay);
         let _ = x_step.set_low();
-        let _ = counter.start(pluse_length);
         let _ = nb::block!(counter.wait());
     }
 }

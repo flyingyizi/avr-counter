@@ -17,9 +17,9 @@ pub fn to_prescale_ticks(
 
     let micros = timeout.to_micros();
 
-    let ticks_1 = micros * cpu_freq ;
+    let ticks_1 = micros * cpu_freq;
 
-    let max_micros = max_ticks as u32  / cpu_freq ;
+    let max_micros = max_ticks as u32 / cpu_freq;
 
     if micros <= max_micros {
         let newticks = ticks_1 as u16;
@@ -181,7 +181,7 @@ macro_rules! impl_atmega_tc1 {
                     peripheral.tccr1b.write(|w| w.cs1().no_clock() );
                     //reset
                     peripheral.tcnt1.write(|w|  w.bits(0) );
-                    peripheral.ocr1a.write(|w|  w.bits(ticks as u16) );
+                    peripheral.ocr1a.write(|w|  w.bits(ticks -1 as u16) );
                     // set CTC mode
                     // WGM13 WGM12 WGM11 WGM10
                     // 0     1     0     0     CTC
@@ -248,7 +248,7 @@ macro_rules! impl_atmega_tc2 {
                     });
                     //reset
                     peripheral.tcnt2.write(|w|  w.bits(0) );
-                    peripheral.ocr2a.write(|w|  w.bits(ticks as u8) );
+                    peripheral.ocr2a.write(|w|  w.bits( (ticks -1) as u8) );
 
             },
             is_block: |peripheral| -> bool{
