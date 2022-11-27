@@ -23,7 +23,11 @@ macro_rules! impl_tc_traditional {
                 peripheral.$tcnt.write(|w| w.bits(0));
                 peripheral.$ocra.write(|w| w.bits(ticks - 1));
 
-                self.tc_set_ctcmode();
+                //set to ctc mode
+                {
+                    let $periph_ctcmode_var = &(*<$tc>::ptr());
+                    $start_ctc_mode
+                }
 
                 peripheral.$tccrb.write(|w| match prescale {
                     1 => w.$cs().direct(),
@@ -48,7 +52,7 @@ macro_rules! impl_tc_traditional {
             ) -> Option<(u16 /*prescale*/, $bits /*newticks*/)> {
                 type Width = $bits;
                 //only support Mhz
-                // debug_assert!(cpu_freq_hz >= 1_000_000);
+                debug_assert!(CPU_FREQHZ >= 1_000_000);
 
                 let cpu_freq = CPU_FREQHZ / 1_000_000;
 
@@ -78,44 +82,9 @@ macro_rules! impl_tc_traditional {
                 None
             }
 
-            #[inline]
-            unsafe fn tc_set_ctcmode(&self) {
-                let $periph_ctcmode_var = &(*<$tc>::ptr());
-                $start_ctc_mode
-            }
-            #[inline]
-            unsafe fn tc_would_block(&self) -> bool {
-                let peripheral = &(*<$tc>::ptr());
-
-                if true == peripheral.$tifr.read().$ocfa().bit_is_set() {
-                    peripheral.$tifr.modify(|_, w| w.$ocfa().set_bit());
-                    return false;
-                }
-                true
-            }
-
             /// Initialize timer
             pub fn new() -> Self {
                 Self {}
-            }
-            fn _start(&mut self, timeout: $crate::fugit::MicrosDurationU32) -> Result<(), ()> {
-                unsafe {
-                    if let Some((prescale, ticks)) = self.tc_calculate_overf(timeout) {
-                        self.tc_init(prescale, ticks);
-                    } else {
-                        return Err(());
-                    }
-                }
-
-                Ok(())
-            }
-            fn _wait(&mut self) -> $crate::nb::Result<(), $crate::void::Void> {
-                unsafe {
-                    if true == self.tc_would_block() {
-                        return Err($crate::nb::Error::WouldBlock);
-                    }
-                }
-                Ok(())
             }
         }
 
@@ -125,10 +94,19 @@ macro_rules! impl_tc_traditional {
             where
                 T: Into<Self::Time>,
             {
-                self._start(timeout.into()).unwrap()
+                if let Some((prescale, ticks)) = self.tc_calculate_overf(timeout.into()) {
+                    unsafe { self.tc_init(prescale, ticks) };
+                }
             }
             fn wait(&mut self) -> nb::Result<(), void::Void> {
-                self._wait()
+                unsafe {
+                    let peripheral = &(*<$tc>::ptr());
+                    if true == peripheral.$tifr.read().$ocfa().bit_is_set() {
+                        peripheral.$tifr.modify(|_, w| w.$ocfa().set_bit());
+                        return Ok(());
+                    }
+                }
+                Err($crate::nb::Error::WouldBlock)
             }
         }
     };
@@ -165,7 +143,6 @@ macro_rules! impl_atmega_tc1 {
             peripheral: $crate::pac::TC1,
             bits:u16,
             start_ctc_mode: |peripheral| {
-
                 // set CTC mode
                     // WGM13 WGM12 WGM11 WGM10
                     // 0     1     0     0     CTC
