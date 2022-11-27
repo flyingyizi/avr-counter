@@ -6,14 +6,14 @@
 /// judge whether TC can store input timeout . if yes return prescale and related ticks.
 /// the ticks is the based on final prescaled TC freq. if can not store the timeout, return err
 pub fn to_prescale_ticks(
-    cpu_freq: u32,
+    cpu_freq_hz: u32,
     timeout: fugit::MicrosDurationU32,
     max_ticks: u16,
 ) -> Result<(u16 /*prescale*/, u16 /*newticks*/), ()> {
     //only support Mhz
-    debug_assert!(cpu_freq >= 1_000_000);
+    debug_assert!(cpu_freq_hz >= 1_000_000);
 
-    let cpu_freq = cpu_freq / 1_000_000;
+    let cpu_freq = cpu_freq_hz / 1_000_000;
 
     let micros = timeout.ticks();
 
@@ -50,7 +50,7 @@ macro_rules! impl_tc_traditional {
         is_block: |$periph_wait_var:ident|->bool $wait:block,
         calc_overf: |$cpu_freq: ident, $timeout: ident|->Result<(u16/*prescale*/, u16/*ticks*/),()> $calc_overf:block,
     ) => {
-        /// $Name support embedded_hal::timer::CountDown
+        /// support embedded_hal::timer::CountDown. CPU_FREQ should be Mhz,e.g. 16_000_000.
         ///
         pub struct $Name<const CPU_FREQ: u32> {}
         impl<const CPU_FREQ: u32> $Name<CPU_FREQ> {
