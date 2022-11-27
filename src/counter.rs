@@ -25,16 +25,14 @@ macro_rules! impl_tc_traditional {
 
                 self.tc_set_ctcmode();
 
-                peripheral.$tccrb.write(|w| {
-                    match prescale {
-                        1 => w.$cs().direct(),
-                        8 => w.$cs().prescale_8(),
-                        64 => w.$cs().prescale_64(),
-                        256 => w.$cs().prescale_256(),
-                        1024 => w.$cs().prescale_1024(),
-                        _ => {
-                            unreachable!()
-                        }
+                peripheral.$tccrb.write(|w| match prescale {
+                    1 => w.$cs().direct(),
+                    8 => w.$cs().prescale_8(),
+                    64 => w.$cs().prescale_64(),
+                    256 => w.$cs().prescale_256(),
+                    1024 => w.$cs().prescale_1024(),
+                    _ => {
+                        unreachable!()
                     }
                 });
             }
@@ -203,6 +201,68 @@ macro_rules! impl_atmega_tc2 {
     };
 }
 
+#[macro_export]
+macro_rules! impl_atmega_tc3 {
+    (
+        name: $Name:tt,
+    ) => {
+        impl_tc_traditional! {
+            name: $Name,
+            peripheral: $crate::pac::TC3,
+            bits:u16,
+            start_ctc_mode: |peripheral| {
+                    // set CTC mode
+                    // WGM3[3] WGM3[2] WGM3[1] WGM3[0]
+                    // 0       1       0       0        CTC
+                    peripheral.tccr3a.write(|w| w.wgm3().bits(0b00));
+                    peripheral.tccr3b.write(|w| w.wgm3().bits(0b01));
+            },
+            regs: [(tccr3a,tccr3b, ocr3a, tcnt3,tifr3),(cs3, ocf3a)] ,
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_atmega_tc4 {
+    (
+        name: $Name:tt,
+    ) => {
+        impl_tc_traditional! {
+            name: $Name,
+            peripheral: $crate::pac::TC4,
+            bits:u16,
+            start_ctc_mode: |peripheral| {
+                    // set CTC mode
+                    // WGM4[3] WGM4[2] WGM4[1] WGM4[0]
+                    // 0       1       0       0        CTC
+                    peripheral.tccr4a.write(|w| w.wgm4().bits(0b00));
+                    peripheral.tccr4b.write(|w| w.wgm4().bits(0b01));
+            },
+            regs: [(tccr4a,tccr4b, ocr4a, tcnt4,tifr4),(cs4, ocf4a)] ,
+        }
+    };
+}
+#[macro_export]
+macro_rules! impl_atmega_tc5 {
+    (
+        name: $Name:tt,
+    ) => {
+        impl_tc_traditional! {
+            name: $Name,
+            peripheral: $crate::pac::TC5,
+            bits:u16,
+            start_ctc_mode: |peripheral| {
+                    // set CTC mode
+                    // WGM5[3] WGM5[2] WGM5[1] WGM5[0]
+                    // 0       1       0       0        CTC
+                    peripheral.tccr5a.write(|w| w.wgm5().bits(0b00));
+                    peripheral.tccr5b.write(|w| w.wgm5().bits(0b01));
+            },
+            regs: [(tccr5a,tccr5b, ocr5a, tcnt5,tifr5),(cs5, ocf5a)] ,
+        }
+    };
+}
+
 #[cfg(any(
     feature = "atmega32u4",
     feature = "atmega48p",
@@ -245,10 +305,36 @@ impl_atmega_tc2! {
     name: Counter2,
 }
 
+#[cfg(any(
+    feature = "atmega32u4",
+    feature = "atmega328pb",
+    feature = "atmega2560",
+    feature = "atmega1280",
+    feature = "atmega1284p"
+))]
+impl_atmega_tc3! {
+    name: Counter3,
+}
+
+#[cfg(any(
+    feature = "atmega32u4",
+    feature = "atmega328pb",
+    feature = "atmega2560",
+    feature = "atmega1280"
+))]
+impl_atmega_tc4! {
+    name: Counter4,
+}
+#[cfg(any(feature = "atmega2560", feature = "atmega1280"))]
+impl_atmega_tc5! {
+    name: Counter5,
+}
+
+//[ATMEGA328PB datasheet](https://datasheet.lcsc.com/lcsc/2210181030_Microchip-Tech-ATMEGA328PB-AU_C132230.pdf)
+//[ATMEGA8A datasheet](https://datasheet.lcsc.com/lcsc/2210141830_Microchip-Tech-ATMEGA8A-AN_C5127755.pdf)
 #[cfg(test)]
 mod tests {
 
     #[test]
-    fn it_works() {
-    }
+    fn it_works() {}
 }
