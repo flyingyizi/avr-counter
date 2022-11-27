@@ -19,13 +19,12 @@ pub use void;
 pub mod prelude {
     pub use embedded_hal::timer::CountDown as _;
 }
-pub use counter::to_prescale_ticks;
 
 // #[cfg(test)]
 // pub mod testutil;
 
-#[cfg(feature = "atmega8")]
-pub use avr_device::atmega8 as pac;
+// #[cfg(feature = "atmega8")]
+// pub use avr_device::atmega8 as pac;
 
 #[cfg(feature = "atmega1280")]
 pub use avr_device::atmega1280 as pac;
@@ -44,16 +43,16 @@ pub use avr_device::atmega32u4 as pac;
 #[cfg(feature = "atmega48p")]
 pub use avr_device::atmega48p as pac;
 
-#[cfg(feature = "attiny167")]
-pub use avr_device::attiny167 as pac;
-#[cfg(feature = "attiny2313")]
-pub use avr_device::attiny2313 as pac;
-#[cfg(feature = "attiny84")]
-pub use avr_device::attiny84 as pac;
-#[cfg(feature = "attiny85")]
-pub use avr_device::attiny85 as pac;
-#[cfg(feature = "attiny88")]
-pub use avr_device::attiny88 as pac;
+// #[cfg(feature = "attiny167")]
+// pub use avr_device::attiny167 as pac;
+// #[cfg(feature = "attiny2313")]
+// pub use avr_device::attiny2313 as pac;
+// #[cfg(feature = "attiny84")]
+// pub use avr_device::attiny84 as pac;
+// #[cfg(feature = "attiny85")]
+// pub use avr_device::attiny85 as pac;
+// #[cfg(feature = "attiny88")]
+// pub use avr_device::attiny88 as pac;
 
 #[cfg(test)]
 mod tests {
