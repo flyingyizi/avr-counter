@@ -247,22 +247,8 @@ impl_atmega_tc2! {
 
 #[cfg(test)]
 mod tests {
-    use crate::to_prescale_ticks;
-    // pub fn to_prescale_ticks(
-    //     cpu_freq: u32,
-    //     timeout: fugit::MicrosDurationU32,
-    //     max_ticks: u16,
-    // ) -> Result<(u16 /*prescale*/, u16 /*newticks*/), ()> {
 
     #[test]
     fn it_works() {
-        let timeout = fugit::MicrosDurationU32::micros(5);
-        let r = to_prescale_ticks(16_000_000, timeout, core::u8::MAX as u16);
-        // println!("{:?}", r);
-        assert_eq!(r, Ok((1, 80)));
-        let timeout = fugit::MicrosDurationU32::micros(15000);
-        let r = to_prescale_ticks(16_000_000, timeout, core::u8::MAX as u16);
-        // println!("{:?}", r);
-        assert_eq!(r, Ok((1024, 234)));
     }
 }
