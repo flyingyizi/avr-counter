@@ -1,5 +1,179 @@
 //! macro to define
 
+
+use core::marker;
+use embedded_hal::timer::CountDown;
+
+#[derive(ufmt::derive::uDebug, Debug,, Eq, PartialEq, Copy, Clone)]
+pub enum Error {
+    /// Timer is disabled
+    Disabled,
+    WrongAutoReload,
+}
+
+bitflags::bitflags! {
+    pub struct Event: u32 {
+        const Update  = 1 << 0; //Overflow
+        const InputCapture = 1 << 1;
+        const MatchOCR = 1 << 2;
+        const C3 = 1 << 3;
+        const C4 = 1 << 4;
+    }
+}
+
+/// Timer wrapper
+pub struct Timer<TIM> {
+    pub(crate) tim: TIM,
+    pub(crate) clk: u32, //hz
+}
+
+pub trait CounterOps<H,T> {
+    type Width: Into<u32> + From<u16> + From<u8>;
+    fn max_auto_reload() -> u32;
+    unsafe fn set_auto_reload_unchecked(&mut self, arr: u32);
+    fn set_auto_reload(&mut self, arr: u32) -> Result<(), super::Error>;
+    fn read_auto_reload() -> u32;
+    fn enable_preload(&mut self, b: bool);
+    fn enable_counter(&mut self);
+    fn disable_counter(&mut self);
+    fn is_counter_enabled(&self) -> bool;
+    fn reset_counter(&mut self);
+    fn set_prescaler(&mut self, psc: u16);
+    fn read_prescaler(&self) -> u16;
+    fn trigger_update(&mut self);
+    fn clear_interrupt_flag(&mut self, event: Event);
+    fn listen_interrupt(&mut self, event: Event, b: bool);
+    fn get_interrupt_flag(&self) -> Event;
+    fn read_count(&self) -> Self::Width;
+    fn start_one_pulse(&mut self);
+    fn start_no_update(&mut self);
+    fn cr1_reset(&mut self);
+}
+
+// // All F4xx parts have these timers.
+// hal!(
+//     pac::TIM9: [Timer9, u16, c: (CH2),],
+//     pac::TIM11: [Timer11, u16, c: (CH1),],
+// );
+macro_rules! hal {
+    ($($TIM:ty: [
+        $Timer:ident,
+        $bits:ty,
+        regs: [($tccra:tt,$tccrb:tt, $ocra:tt, $tcnt:tt, $tifr:tt),($cs:tt, $ocfa:tt)] ,
+
+        // $(c: ($cnum:ident $(, $aoe:ident)?),)?
+        // $(m: $timbase:ident,)?
+    ],)+) => {
+        $(
+            pub type $Timer = Timer<$TIM>;
+
+            impl General for $TIM {
+                type Width = $bits;
+
+                #[inline(always)]
+                fn max_auto_reload() -> u32 {
+                    <$bits>::MAX as u32
+                }
+                #[inline(always)]
+                unsafe fn set_auto_reload_unchecked(&mut self, arr: u32) {
+                    self.$tcnt.write(|w| w.bits(arr as Self::Width));
+                }
+
+                #[inline(always)]
+                fn set_auto_reload(&mut self, arr: u32) -> Result<(), Error> {
+                    // Note: Make it impossible to set the ARR value to 0, since this
+                    // would cause an infinite loop.
+                    if arr > 0 && arr <= Self::max_auto_reload() {
+                        Ok(unsafe { self.set_auto_reload_unchecked(arr) })
+                    } else {
+                        Err(Error::WrongAutoReload)
+                    }
+                }
+                
+                #[inline(always)]
+                fn read_auto_reload() -> u32 {
+                    let tim = unsafe { &*<$TIM>::ptr() };
+                    tim.arr.read().bits()
+                }
+                #[inline(always)]
+                fn enable_preload(&mut self, b: bool) {
+                    // self.cr1.modify(|_, w| w.arpe().bit(b));
+                }
+                #[inline(always)]
+                fn enable_counter(&mut self) {
+                    self.cr1.modify(|_, w| w.cen().set_bit());
+                }
+                #[inline(always)]
+                fn disable_counter(&mut self) {
+                    self.cr1.modify(|_, w| w.cen().clear_bit());
+                }
+                #[inline(always)]
+                fn is_counter_enabled(&self) -> bool {
+                    self.cr1.read().cen().is_enabled()
+                }
+                #[inline(always)]
+                fn reset_counter(&mut self) {
+                    self.cnt.reset();
+                }
+                #[inline(always)]
+                fn set_prescaler(&mut self, psc: u16) {
+                    self.psc.write(|w| w.psc().bits(psc) );
+                }
+                #[inline(always)]
+                fn read_prescaler(&self) -> u16 {
+                    self.psc.read().psc().bits()
+                }
+                #[inline(always)]
+                fn trigger_update(&mut self) {
+                    self.cr1.modify(|_, w| w.urs().set_bit());
+                    self.egr.write(|w| w.ug().set_bit());
+                    self.cr1.modify(|_, w| w.urs().clear_bit());
+                }
+                #[inline(always)]
+                fn clear_interrupt_flag(&mut self, event: Event) {
+                    self.sr.write(|w| unsafe { w.bits(0xffff & !event.bits()) });
+                }
+                #[inline(always)]
+                fn listen_interrupt(&mut self, event: Event, b: bool) {
+                    if b {
+                        self.dier.modify(|r, w| unsafe { w.bits(r.bits() | event.bits()) });
+                    } else {
+                        self.dier.modify(|r, w| unsafe { w.bits(r.bits() & !event.bits()) });
+                    }
+                }
+                #[inline(always)]
+                fn get_interrupt_flag(&self) -> Event {
+                    Event::from_bits_truncate(self.sr.read().bits())
+                }
+                #[inline(always)]
+                fn read_count(&self) -> Self::Width {
+                    self.cnt.read().bits() as Self::Width
+                }
+                #[inline(always)]
+                fn start_one_pulse(&mut self) {
+                    self.cr1.write(|w| unsafe { w.bits(1 << 3) }.cen().set_bit());
+                }
+                #[inline(always)]
+                fn start_no_update(&mut self) {
+                    self.cr1.write(|w| w.cen().set_bit().udis().set_bit());
+                }
+                #[inline(always)]
+                fn cr1_reset(&mut self) {
+                    self.cr1.reset();
+                }
+            }
+            $(with_pwm!($TIM: $cnum $(, $aoe)?);)?
+
+            $(impl MasterTimer for $TIM {
+                type Mms = pac::$timbase::cr2::MMS_A;
+                fn master_mode(&mut self, mode: Self::Mms) {
+                    self.cr2.modify(|_,w| w.mms().variant(mode));
+                }
+            })?
+        )+
+    }
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #[macro_export]
 macro_rules! impl_tc_traditional {
     (
@@ -98,7 +272,7 @@ macro_rules! impl_tc_traditional {
                     unsafe { self.tc_init(prescale, ticks) };
                 }
             }
-            fn wait(&mut self) -> nb::Result<(), void::Void> {
+            fn wait(&mut self) -> $crate::nb::Result<(), $crate::void::Void> {
                 unsafe {
                     let peripheral = &(*<$tc>::ptr());
                     if true == peripheral.$tifr.read().$ocfa().bit_is_set() {

@@ -1,5 +1,6 @@
-implement embedded_hal::timer::CountDown trait for avr TC
+implement embedded_hal::timer::CountDown trait for avr TC.
 
+notes: Considering the consumption of function call maybe hurge, if you delay is very small, it is recommended that you use delay_us in [avr-hal](https://github.com/Rahix/avr-hal) for accurate delay. the delay_us directly use assembly code to do loop delay.
 
 ## example
 
@@ -30,7 +31,7 @@ the snippets execute result is like below:
 ![](examples/avr/img/demo.png)
 
 
-## how to review final codes
+## how to review final codes expanded from macro
 
 cargo-expand is a useful tool to review rust macro expand result.
 ```
@@ -43,7 +44,7 @@ execute  `cargo expand`
 ```
 avr-counter/$ cargo expand --features atmega328p counter
 ```
-will get snippets:
+will get snippets likes:
 ```rust
 ...
 mod counter {
